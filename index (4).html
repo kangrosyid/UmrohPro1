@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ISED Umroh Assistant — AI Sales & CRM</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] },
+          colors: {
+            makkah: { 50: '#f0f5fa', 100: '#e1ebf5', 600: '#1e40af', 700: '#1e3a8a', 800: '#0f2942', 900: '#091929' },
+            gold: { 50: '#fffbeb', 100: '#fef3c7', 500: '#f59e0b', 600: '#d97706', 700: '#b45309' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    @media print {
+      body * { visibility: hidden; }
+      #printableReceiptArea, #printableReceiptArea * { visibility: visible; }
+      #printableReceiptArea { position: fixed; inset: 0; width: 100%; background: white; padding: 24px; }
+    }
+  </style>
+</head>
+<body class="m-0 p-0 bg-slate-50 text-slate-800 antialiased selection:bg-makkah-700 selection:text-white flex justify-center">
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toastContainer" class="fixed top-4 right-4 z-[100] flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+
+  <!-- LOGIN OVERLAY -->
+  <div id="loginScreen" class="fixed inset-0 z-[90] bg-makkah-900 flex items-center justify-center p-4 transition-all duration-300">
+    <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-gold-500/20">
+      <div class="bg-gradient-to-br from-makkah-800 to-makkah-900 p-8 text-white relative overflow-hidden">
+        <div class="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-gold-500/10 blur-xl"></div>
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-11 h-11 rounded-2xl bg-gold-500 flex items-center justify-center text-makkah-900 font-extrabold text-xl shadow-lg">
+            <i class="ph-fill ph-kaaba"></i>
+          </div>
+          <div>
+            <span class="text-xs uppercase tracking-widest text-gold-500 font-bold block">Formula I-S-E-D</span>
+            <h1 class="text-xl font-extrabold tracking-tight">ISED Umroh Assistant</h1>
+          </div>
+        </div>
+        <p class="text-sm text-slate-300 leading-relaxed">AI Sales Assistant & CRM untuk mengelola leads, membangun kepercayaan, edukasi, hingga pendaftaran jamaah.</p>
+      </div>
+      <form id="loginForm" onsubmit="handleLogin(event)" class="p-8 space-y-5">
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">Username</label>
+          <div class="relative">
+            <i class="ph ph-user absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i>
+            <input type="text" id="loginUser" required class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-makkah-700 focus:ring-2 focus:ring-makkah-700/20 outline-none text-base" placeholder="Masukkan username" />
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">Password</label>
+          <div class="relative">
+            <i class="ph ph-lock-key absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i>
+            <input type="password" id="loginPass" required class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-makkah-700 focus:ring-2 focus:ring-makkah-700/20 outline-none text-base" placeholder="Masukkan password" />
+          </div>
+        </div>
+        <button type="submit" id="btnLogin" class="w-full py-3.5 px-6 rounded-xl bg-makkah-800 hover:bg-makkah-700 active:scale-95 transition-all text-white font-bold text-base shadow-lg shadow-makkah-900/20 flex items-center justify-center gap-2">
+          <span>Masuk ke Dashboard</span>
+          <i class="ph-bold ph-arrow-right"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MAIN WRAPPER -->
+  <div class="w-full h-screen flex overflow-hidden bg-slate-50 relative">
+    
+    <!-- BACKDROP OVERLAY MOBILE -->
+    <div id="sidebarBackdrop" onclick="toggleSidebar(false)" class="bg-black/50 fixed inset-0 z-40 md:hidden hidden transition-opacity"></div>
+
+    <!-- SIDEBAR -->
+    <aside id="appSidebar" class="fixed md:relative inset-y-0 left-0 z-50 w-64 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out flex flex-col h-full bg-makkah-900 text-white border-r border-makkah-800 select-none">
+      <div class="p-5 border-b border-white/10 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-gold-500 to-gold-600 flex items-center justify-center text-makkah-900 font-black text-lg shadow-md">
+            <i class="ph-fill ph-kaaba"></i>
+          </div>
+          <div>
+            <h2 class="font-extrabold text-base tracking-tight leading-none text-white">ISED Umroh</h2>
+            <span class="text-xs text-gold-500 font-semibold">AI Sales Assistant</span>
+          </div>
+        </div>
+        <button onclick="toggleSidebar(false)" class="md:hidden text-slate-300 hover:text-white p-1">
+          <i class="ph ph-x text-xl"></i>
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+        <div class="px-3 pb-1.5 text-xs font-bold uppercase tracking-wider text-slate-400">Menu Utama</div>
+        <div id="navMenuContainer" class="space-y-1"></div>
+      </div>
+
+      <div class="p-4 border-t border-white/10 bg-makkah-800/60">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-9 h-9 rounded-full bg-gold-500/20 border border-gold-500/40 flex items-center justify-center text-gold-500 font-bold text-sm" id="sidebarAvatar">AD</div>
+          <div class="overflow-hidden">
+            <p class="text-sm font-bold text-white truncate" id="sidebarUserName">Admin Travel</p>
+            <p class="text-xs text-slate-300 truncate" id="sidebarUserOrg">Al-Haramain Perdana</p>
+          </div>
+        </div>
+        <button onclick="handleLogout()" class="w-full py-2 px-3 rounded-xl bg-white/10 hover:bg-rose-600/90 text-white text-sm font-semibold transition-all flex items-center justify-center gap-2 active:scale-95">
+          <i class="ph-bold ph-sign-out"></i>
+          <span>Keluar Akun</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- WRAPPER KANAN -->
+    <div class="flex-1 flex flex-col overflow-hidden relative w-full">
+      
+      <!-- MOBILE HEADER -->
+      <header class="md:hidden flex-none h-16 flex items-center justify-between px-4 bg-white border-b border-slate-200 z-30">
+        <button onclick="toggleSidebar(true)" class="p-2 -ml-2 rounded-xl text-slate-700 hover:bg-slate-100 active:scale-95">
+          <i class="ph-bold ph-list text-2xl"></i>
+        </button>
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-makkah-800 text-gold-500 flex items-center justify-center text-sm">
+            <i class="ph-fill ph-kaaba"></i>
+          </div>
+          <span class="font-extrabold text-base text-makkah-900">ISED Umroh Assistant</span>
+        </div>
+        <div class="w-8"></div>
+      </header>
+
+      <!-- KONTEN UTAMA -->
+      <main id="mainContent" class="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6 pb-safe">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 id="pageTitle" class="text-xl sm:text-2xl font-extrabold text-makkah-900">Dashboard & Funnel I-S-E-D</h1>
+            </div>
+            <p id="pageSubtitle" class="text-sm text-slate-500 mt-0.5">Pantau konversi jamaah dari Iklan, Silaturahmi, Edukasi, hingga Daftar & DP.</p>
+          </div>
+          <div class="flex items-center gap-2.5 self-start sm:self-auto">
+            <button onclick="openLeadModal()" class="py-2.5 px-4 rounded-xl bg-makkah-800 hover:bg-makkah-700 text-white font-bold text-sm shadow-sm flex items-center gap-2 active:scale-95 transition-all">
+              <i class="ph-bold ph-plus-circle text-lg text-gold-500"></i>
+              <span>Tambah Leads</span>
+            </button>
+            <button onclick="switchMenu('ai_assistant')" class="py-2.5 px-4 rounded-xl bg-gold-500 hover:bg-gold-600 text-makkah-900 font-bold text-sm shadow-sm flex items-center gap-2 active:scale-95 transition-all">
+              <i class="ph-fill ph-sparkle text-lg"></i>
+              <span>AI Assistant</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- VIEW 1: DASHBOARD -->
+        <section id="view-dashboard" class="space-y-6">
+          <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-wrap items-center gap-3">
+            <div class="flex items-center gap-2 text-sm font-bold text-slate-700 mr-2">
+              <i class="ph-fill ph-funnel text-makkah-700 text-lg"></i>
+              <span>Filter Kohort:</span>
+            </div>
+            <select id="dashFilterSource" onchange="renderDashboard()" class="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-slate-50 font-medium"></select>
+            <select id="dashFilterPic" onchange="renderDashboard()" class="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-slate-50 font-medium"></select>
+            <select id="dashFilterPackage" onchange="renderDashboard()" class="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-slate-50 font-medium"></select>
+            <button onclick="resetDashFilter()" class="ml-auto text-sm font-semibold text-makkah-700 hover:underline px-2 py-1">Reset Filter</button>
+          </div>
+
+          <div id="dashboardKpiGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-5">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-base font-extrabold text-makkah-900">Tahapan Funnel Formula I-S-E-D</h3>
+                  <p class="text-sm text-slate-500">Distribusi posisi calon jamaah & temperatur aktual di setiap tahap</p>
+                </div>
+                <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-makkah-50 text-makkah-800">Kohort Aktif</span>
+              </div>
+              <div id="isedFunnelSteps" class="grid grid-cols-1 sm:grid-cols-4 gap-3.5"></div>
+              <div id="isedRateCards" class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-2 border-t border-slate-100"></div>
+            </div>
+
+            <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col justify-between space-y-5">
+              <div>
+                <h3 class="text-base font-extrabold text-makkah-900 mb-1">Klasifikasi Temperatur Leads</h3>
+                <p class="text-sm text-slate-500 mb-4">Prioritas tindak lanjut CS berdasarkan skor 0–100</p>
+                <div id="tempDistributionList" class="space-y-3"></div>
+              </div>
+              <div class="pt-4 border-t border-slate-100">
+                <h4 class="text-sm font-bold text-slate-700 mb-2">Evaluasi Status Pendaftaran & DP</h4>
+                <div id="closingSummaryList" class="grid grid-cols-3 gap-2 text-center"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-sm">
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h3 class="text-base font-extrabold text-makkah-900">Jadwal Follow-up Jatuh Tempo</h3>
+                  <p class="text-sm text-slate-500">Tugas hari ini & yang terlewat (Overdue)</p>
+                </div>
+                <button onclick="switchMenu('followups')" class="text-sm font-bold text-makkah-700 hover:underline">Lihat Semua →</button>
+              </div>
+              <div id="dashFollowUpList" class="space-y-2.5"></div>
+            </div>
+
+            <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-sm">
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h3 class="text-base font-extrabold text-makkah-900">Leads HOT & Butuh Tindakan Cepat</h3>
+                  <p class="text-sm text-slate-500">Prioritas utama untuk dihubungi atau diedukasi</p>
+                </div>
+                <button onclick="switchMenu('leads')" class="text-sm font-bold text-makkah-700 hover:underline">Database Leads →</button>
+              </div>
+              <div id="dashHotLeadsList" class="space-y-2.5"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 2: DATABASE LEADS -->
+        <section id="view-leads" class="space-y-5 hidden opacity-0 pointer-events-none">
+          <div class="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+            <div class="flex flex-col md:flex-row gap-3 justify-between">
+              <div class="relative flex-1">
+                <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i>
+                <input type="text" id="leadSearchInput" oninput="renderLeadsTable()" placeholder="Cari nama calon jamaah, nomor WhatsApp, kota, atau kampanye..." class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-makkah-700 outline-none" />
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <label class="cursor-pointer py-2.5 px-3.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-sm flex items-center gap-2">
+                  <i class="ph-bold ph-upload-simple text-makkah-700"></i>
+                  <span>Impor CSV</span>
+                  <input type="file" accept=".csv" onchange="handleImportCSV(event)" class="hidden" />
+                </label>
+                <button onclick="openLeadModal()" class="py-2.5 px-4 rounded-xl bg-makkah-800 hover:bg-makkah-700 text-white font-bold text-sm flex items-center gap-2">
+                  <i class="ph-bold ph-user-plus"></i>
+                  <span>Tambah Jamaah</span>
+                </button>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+              <select id="filterLeadTemp" onchange="renderLeadsTable()" class="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-slate-50">
+                <option value="">Semua Temperatur</option>
+                <option value="HOT">🔥 HOT (70-100)</option>
+                <option value="WARM">☀️ WARM (40-69)</option>
+                <option value="COLD">❄️ COLD (0-39)</option>
+              </select>
+              <select id="filterLeadStage" onchange="renderLeadsTable()" class="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-slate-50">
+                <option value="">Semua Tahap I-S-E-D</option>
+                <option value="IKLAN">I — IKLAN</option>
+                <option value="SILATURAHMI">S — SILATURAHMI</option>
+                <option value="EDUKASI">E — EDUKASI</option>
+                <option value="DAFTAR">D — DAFTAR</option>
+              </select>
+              <select id="filterLeadStatus" onchange="renderLeadsTable()" class="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-slate-50"></select>
+              <select id="filterLeadSource" onchange="renderLeadsTable()" class="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-slate-50"></select>
+              <select id="filterLeadPic" onchange="renderLeadsTable()" class="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-slate-50"></select>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-slate-50/80 border-b border-slate-200 text-slate-600 text-sm font-bold">
+                    <th class="py-3.5 px-4">Calon Jamaah</th>
+                    <th class="py-3.5 px-4">Paket & Rencana</th>
+                    <th class="py-3.5 px-4">Tahap I-S-E-D & Status</th>
+                    <th class="py-3.5 px-4">Temperatur & Skor</th>
+                    <th class="py-3.5 px-4">Tindakan Berikutnya</th>
+                    <th class="py-3.5 px-4 text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="leadsTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 3: AI SALES ASSISTANT -->
+        <section id="view-ai_assistant" class="space-y-6 hidden opacity-0 pointer-events-none">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-5 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+              <div class="flex items-center gap-2.5 pb-3 border-b border-slate-100">
+                <div class="w-9 h-9 rounded-xl bg-gold-500/20 text-gold-600 flex items-center justify-center text-lg">
+                  <i class="ph-fill ph-brain"></i>
+                </div>
+                <div>
+                  <h3 class="text-base font-extrabold text-makkah-900">Konteks Percakapan & Jamaah</h3>
+                  <p class="text-sm text-slate-500">Pilih jamaah dari database atau tempel chat WA</p>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Pilih Calon Jamaah</label>
+                <select id="aiSelectLead" onchange="populateAiLeadContext()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium bg-slate-50"></select>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-sm font-bold text-slate-700 mb-1">Tahap Funnel Saat Ini</label>
+                  <select id="aiFunnelStage" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-white">
+                    <option value="IKLAN">I — IKLAN</option>
+                    <option value="SILATURAHMI">S — SILATURAHMI</option>
+                    <option value="EDUKASI">E — EDUKASI</option>
+                    <option value="DAFTAR">D — DAFTAR</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-bold text-slate-700 mb-1">Fakta Paket Acuan</label>
+                  <select id="aiSelectPackage" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-white"></select>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Ringkasan Kebutuhan / Profil</label>
+                <input type="text" id="aiNeedSummary" placeholder="Misal: Ingin umroh bersama orang tua lansia..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm" />
+              </div>
+
+              <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Riwayat / Pesan Terakhir WhatsApp</label>
+                <textarea id="aiConversationInput" rows="4" placeholder="Tempelkan chat terakhir dari calon jamaah di sini..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm"></textarea>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label class="block text-sm font-bold text-slate-700 mb-1">Tujuan Balasan WA</label>
+                  <select id="aiReplyGoal" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-white">
+                    <option value="Sambutan pertama">Sambutan pertama</option>
+                    <option value="Gali kebutuhan" selected>Gali kebutuhan</option>
+                    <option value="Menjawab pertanyaan">Menjawab pertanyaan</option>
+                    <option value="Membangun kepercayaan">Membangun kepercayaan</option>
+                    <option value="Mengundang silaturahmi">Mengundang silaturahmi</option>
+                    <option value="Mengirim edukasi">Mengirim edukasi</option>
+                    <option value="Follow-up">Follow-up</option>
+                    <option value="Mengajak daftar">Mengajak daftar</option>
+                    <option value="Menindaklanjuti setelah pembayaran DP">Tindak lanjut setelah DP</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-bold text-slate-700 mb-1">Gaya Bahasa</label>
+                  <select id="aiReplyTone" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-white">
+                    <option value="Ramah, Sopan & Islami">Ramah, Sopan & Islami</option>
+                    <option value="Konsultatif & Empatik">Konsultatif & Empatik</option>
+                    <option value="Ringkas & Profesional">Ringkas & Profesional</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
+                <button onclick="runAiLeadAnalyzer()" id="btnRunAnalyzer" class="py-3 px-4 rounded-xl bg-makkah-800 hover:bg-makkah-700 text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-all">
+                  <i class="ph-fill ph-magnifying-glass-plus text-gold-500 text-lg"></i>
+                  <span>Analisis Leads</span>
+                </button>
+                <button onclick="runAiReplyGenerator()" id="btnRunReply" class="py-3 px-4 rounded-xl bg-gold-500 hover:bg-gold-600 text-makkah-900 font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-all">
+                  <i class="ph-fill ph-whatsapp-logo text-lg"></i>
+                  <span>Buat Balasan WA</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="lg:col-span-7 space-y-6">
+              <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-sm">
+                <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+                  <div>
+                    <h3 class="text-base font-extrabold text-makkah-900">1. Hasil AI Lead Analyzer (10 Parameter)</h3>
+                    <p class="text-sm text-slate-500">Analisis berdasarkan percakapan & fakta paket tanpa halusinasi harga/fasilitas</p>
+                  </div>
+                  <button onclick="applyAiAnalysisToLead()" id="btnApplyAnalysis" class="hidden py-2 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold flex items-center gap-1.5 active:scale-95">
+                    <i class="ph-bold ph-check-circle"></i>
+                    <span>Simpan Skor & Follow-up ke Leads</span>
+                  </button>
+                </div>
+                <div id="aiAnalyzerOutput" class="space-y-4"></div>
+              </div>
+
+              <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-sm">
+                <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+                  <div>
+                    <h3 class="text-base font-extrabold text-makkah-900">2. WhatsApp Reply Assistant</h3>
+                    <p class="text-sm text-slate-500">Draf balasan siap edit dan salin ke WhatsApp Business</p>
+                  </div>
+                  <button onclick="runAiReplyGenerator()" class="py-1.5 px-3 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold flex items-center gap-1.5">
+                    <i class="ph-bold ph-arrows-clockwise"></i>
+                    <span>Regenerasi</span>
+                  </button>
+                </div>
+                <div id="aiReplyOutput" class="space-y-4"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 4: OBJECTION HANDLING ASSISTANT -->
+        <section id="view-objection" class="space-y-6 hidden opacity-0 pointer-events-none">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-5 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+              <h3 class="text-base font-extrabold text-makkah-900">Objection Handling Assistant</h3>
+              <p class="text-sm text-slate-500">Bantu CS merespons keberatan calon jamaah secara empatik dan terukur tanpa terkesan memaksa.</p>
+
+              <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Kategori Keberatan (10 Kategori Utama)</label>
+                <select id="objCategorySelect" onchange="prefillObjectionSample()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 font-medium">
+                  <option value="Ingin berpikir terlebih dahulu">1. Ingin berpikir terlebih dahulu ("Saya pikir-pikir dulu")</option>
+                  <option value="Harga terlalu mahal">2. Harga terlalu mahal</option>
+                  <option value="Belum memiliki anggaran">3. Belum memiliki anggaran</option>
+                  <option value="Perlu berdiskusi dengan pasangan atau keluarga">4. Perlu berdiskusi dengan pasangan atau keluarga</option>
+                  <option value="Membandingkan travel">5. Membandingkan dengan travel lain</option>
+                  <option value="Khawatir terhadap keamanan atau kredibilitas">6. Khawatir terhadap keamanan atau kredibilitas izin</option>
+                  <option value="Khawatir terhadap kenyamanan orang tua">7. Khawatir terhadap kenyamanan orang tua / lansia</option>
+                  <option value="Belum yakin dengan jadwal">8. Belum yakin dengan jadwal keberangkatan</option>
+                  <option value="Belum siap membayar DP">9. Belum siap membayar DP sekarang</option>
+                  <option value="Tidak merespons setelah menerima penawaran">10. Tidak merespons setelah menerima penawaran (Ghosting)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Kalimat Keberatan Calon Jamaah</label>
+                <textarea id="objStatementInput" rows="3" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm"></textarea>
+              </div>
+
+              <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Acuan Paket Umroh</label>
+                <select id="objPackageSelect" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white"></select>
+              </div>
+
+              <button onclick="runObjectionHandler()" class="w-full py-3 px-4 rounded-xl bg-makkah-800 hover:bg-makkah-700 text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-all">
+                <i class="ph-fill ph-shield-check text-gold-500 text-lg"></i>
+                <span>Susun Strategi & Balasan Keberatan</span>
+              </button>
+            </div>
+
+            <div class="lg:col-span-7 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-sm">
+              <h3 class="text-base font-extrabold text-makkah-900 mb-4 pb-3 border-b border-slate-100">Panduan Strategi & Draf Respons (7 Poin)</h3>
+              <div id="objectionOutputContainer" class="space-y-4"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 5: FOLLOW-UP HARI INI & PLANNER -->
+        <section id="view-followups" class="space-y-6 hidden opacity-0 pointer-events-none">
+          <div class="bg-gradient-to-r from-makkah-900 to-makkah-800 text-white p-5 rounded-3xl shadow-sm">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <span class="text-xs font-bold uppercase tracking-wider text-gold-500">Panduan Ritme I-S-E-D</span>
+                <h3 class="text-base font-extrabold mt-0.5">Rekomendasi Alur Follow-up Berbasis Konteks</h3>
+              </div>
+              <button onclick="openFollowUpModal()" class="py-2 px-4 rounded-xl bg-gold-500 hover:bg-gold-600 text-makkah-900 font-bold text-sm self-start md:self-auto flex items-center gap-1.5">
+                <i class="ph-bold ph-calendar-plus"></i>
+                <span>Jadwalkan Follow-up Baru</span>
+              </button>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 mt-4 text-sm">
+              <div class="bg-white/10 p-3 rounded-2xl"><span class="font-bold text-gold-500 block">Hari 0</span>Sambutan & gali kebutuhan</div>
+              <div class="bg-white/10 p-3 rounded-2xl"><span class="font-bold text-gold-500 block">Hari 1</span>Jawab pertanyaan tertunda</div>
+              <div class="bg-white/10 p-3 rounded-2xl"><span class="font-bold text-gold-500 block">Hari 3</span>Kirim materi edukasi relevan</div>
+              <div class="bg-white/10 p-3 rounded-2xl"><span class="font-bold text-gold-500 block">Hari 5</span>Undang konsultasi / silaturahmi</div>
+              <div class="bg-white/10 p-3 rounded-2xl"><span class="font-bold text-gold-500 block">Hari 7</span>Evaluasi kesiapan & langkah lanjut</div>
+            </div>
+          </div>
+
+          <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap gap-2" id="followUpTabButtons">
+              <button onclick="setFollowUpFilter('DUE_OR_OVERDUE')" id="fuTab-DUE_OR_OVERDUE" class="px-3.5 py-2 rounded-xl text-sm font-bold bg-makkah-800 text-white">Hari Ini & Terlambat</button>
+              <button onclick="setFollowUpFilter('TERJADWAL')" id="fuTab-TERJADWAL" class="px-3.5 py-2 rounded-xl text-sm font-bold bg-slate-100 text-slate-700">Semua Terjadwal</button>
+              <button onclick="setFollowUpFilter('SELESAI')" id="fuTab-SELESAI" class="px-3.5 py-2 rounded-xl text-sm font-bold bg-slate-100 text-slate-700">Selesai</button>
+            </div>
+            <div class="flex items-center gap-2">
+              <select id="fuFilterTemp" onchange="renderFollowUpsView()" class="px-3 py-2 rounded-xl border border-slate-200 text-sm bg-slate-50">
+                <option value="">Semua Temperatur</option>
+                <option value="HOT">🔥 HOT</option>
+                <option value="WARM">☀️ WARM</option>
+                <option value="COLD">❄️ COLD</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="followUpsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </section>
+
+        <!-- VIEW 6: TEMPLATE WHATSAPP -->
+        <section id="view-templates" class="space-y-6 hidden opacity-0 pointer-events-none">
+          <div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="flex flex-wrap items-center gap-2">
+              <select id="tplFilterStage" onchange="renderTemplatesView()" class="px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 font-medium">
+                <option value="">Semua Tahap I-S-E-D</option>
+                <option value="IKLAN">I — IKLAN</option>
+                <option value="SILATURAHMI">S — SILATURAHMI</option>
+                <option value="EDUKASI">E — EDUKASI</option>
+                <option value="DAFTAR">D — DAFTAR</option>
+              </select>
+              <span class="text-sm text-slate-500">Gunakan variabel <code class="bg-slate-100 px-1.5 py-0.5 rounded font-bold">{nama}</code> dan <code class="bg-slate-100 px-1.5 py-0.5 rounded font-bold">{paket}</code></span>
+            </div>
+            <button onclick="openTemplateModal()" class="py-2.5 px-4 rounded-xl bg-makkah-800 hover:bg-makkah-700 text-white font-bold text-sm flex items-center gap-2 self-start sm:self-auto">
+              <i class="ph-bold ph-plus"></i>
+              <span>Tambah Template</span>
+            </button>
+          </div>
+          <div id="templatesGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </section>
+
+        <!-- VIEW 7: KWITANSI DP & MANIFES KEBERANGKATAN -->
+        <section id="view-kwitansi_manifest" class="space-y-6 hidden opacity-0 pointer-events-none">
+          <div id="kwitansiKpiGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+
+          <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <div>
+                <h3 class="text-base font-extrabold text-makkah-900">Daftar Kwitansi Pembayaran (DP & Pelunasan)</h3>
+                <p class="text-sm text-slate-500">Catat pembayaran jamaah, otomatis perbarui status ke tahap DAFTAR, dan cetak kwitansi digital resmi.</p>
+              </div>
+              <button onclick="openPaymentModal()" class="py-2.5 px-4 rounded-xl bg-makkah-800 hover:bg-makkah-700 text-white font-bold text-sm flex items-center gap-2 self-start sm:self-auto active:scale-95 transition-all">
+                <i class="ph-bold ph-receipt text-gold-500 text-lg"></i>
+                <span>Buat Kwitansi Baru</span>
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm font-bold">
+                    <th class="py-3 px-4">No. Kwitansi & Tanggal</th>
+                    <th class="py-3 px-4">Nama Jamaah</th>
+                    <th class="py-3 px-4">Program Paket</th>
+                    <th class="py-3 px-4">Jenis & Metode</th>
+                    <th class="py-3 px-4">Nominal Bayar</th>
+                    <th class="py-3 px-4 text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="paymentsTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <div>
+                <h3 class="text-base font-extrabold text-makkah-900">Manifes Keberangkatan Jamaah</h3>
+                <p class="text-sm text-slate-500">Kelola data paspor, visa, vaksin meningitis, dan tipe kamar jamaah yang sudah masuk tahap DAFTAR/DP.</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <select id="manifestFilterPkg" onchange="renderKwitansiManifestView()" class="px-3.5 py-2 rounded-xl border border-slate-200 text-sm bg-slate-50 font-medium"></select>
+                <button onclick="exportManifestCSV()" class="py-2 px-3.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-sm flex items-center gap-1.5">
+                  <i class="ph-bold ph-download-simple text-makkah-700"></i>
+                  <span>Ekspor CSV Manifes</span>
+                </button>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm font-bold">
+                    <th class="py-3 px-4">Jamaah & Pax</th>
+                    <th class="py-3 px-4">Paket & Keberangkatan</th>
+                    <th class="py-3 px-4">No. Paspor & Kamar</th>
+                    <th class="py-3 px-4">Kesiapan Visa & Vaksin</th>
+                    <th class="py-3 px-4">Status Pembayaran</th>
+                    <th class="py-3 px-4 text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="manifestTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 8: WA BUSINESS API AUTO & BROADCAST -->
+        <section id="view-wa_api" class="space-y-6 hidden opacity-0 pointer-events-none">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-5 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg">
+                    <i class="ph-fill ph-whatsapp-logo"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-base font-extrabold text-makkah-900">Konfigurasi WA Business Gateway</h3>
+                    <p class="text-xs text-slate-500">Mendukung Meta Cloud API, Fonnte, Wablas & Webhook</p>
+                  </div>
+                </div>
+                <span id="waApiStatusBadge" class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800">Aktif & Siap</span>
+              </div>
+
+              <form onsubmit="saveWaApiConfig(event)" class="space-y-3.5">
+                <div>
+                  <label class="block text-sm font-bold text-slate-700 mb-1">Provider / Endpoint API URL</label>
+                  <input type="text" id="waApiEndpoint" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="https://api.fonnte.com/send" />
+                </div>
+                <div>
+                  <label class="block text-sm font-bold text-slate-700 mb-1">API Key / Access Token</label>
+                  <input type="password" id="waApiToken" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="Masukkan token WA Business API" />
+                </div>
+                <div>
+                  <label class="block text-sm font-bold text-slate-700 mb-1">Nomor WhatsApp Pengirim (Sender)</label>
+                  <input type="text" id="waApiSender" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="6281299887766" />
+                </div>
+                <div class="flex items-center gap-2 pt-2">
+                  <button type="button" onclick="testWaApiConnection()" class="flex-1 py-2.5 px-4 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-sm flex items-center justify-center gap-1.5">
+                    <i class="ph-bold ph-plugs-connected text-emerald-600"></i>
+                    <span>Tes Koneksi</span>
+                  </button>
+                  <button type="submit" class="flex-1 py-2.5 px-4 rounded-xl bg-makkah-800 hover:bg-makkah-700 text-white font-bold text-sm">
+                    Simpan API
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div class="lg:col-span-7 bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+              <div class="pb-3 border-b border-slate-100">
+                <h3 class="text-base font-extrabold text-makkah-900">Kirim Pesan Langsung & Broadcast Terarah I-S-E-D</h3>
+                <p class="text-sm text-slate-500">Kirim pesan WhatsApp otomatis dari sistem dan catat langsung ke riwayat komunikasi jamaah.</p>
+              </div>
+
+              <form onsubmit="handleSendWaApiMessage(event)" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-1">Target Penerima</label>
+                    <select id="waSendTargetType" onchange="updateWaTargetPreview()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 font-semibold">
+                      <option value="SINGLE">1 Calon Jamaah Spesifik</option>
+                      <option value="HOT">Semua Jamaah Temperatur HOT</option>
+                      <option value="FOLLOWUP_TODAY">Semua Jadwal Follow-up Jatuh Tempo</option>
+                      <option value="STAGE_SILATURAHMI">Semua Tahap S — SILATURAHMI</option>
+                      <option value="STAGE_EDUKASI">Semua Tahap E — EDUKASI</option>
+                    </select>
+                  </div>
+                  <div id="waSingleLeadSelectorWrap">
+                    <label class="block text-sm font-bold text-slate-700 mb-1">Pilih Calon Jamaah</label>
+                    <select id="waSelectSingleLead" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white"></select>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-bold text-slate-700 mb-1">Gunakan Template Cepat (Opsional)</label>
+                  <select id="waSelectTemplate" onchange="applyTemplateToWaComposer()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white"></select>
+                </div>
+
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="text-sm font-bold text-slate-700">Isi Pesan WhatsApp</label>
+                    <span class="text-xs text-slate-500">Variabel aktif: <code class="bg-slate-100 px-1 rounded font-bold">{nama}</code> <code class="bg-slate-100 px-1 rounded font-bold">{paket}</code></span>
+                  </div>
+                  <textarea id="waComposerMessage" rows="4" required class="w-full p-3.5 rounded-2xl border border-slate-200 text-sm" placeholder="Assalamualaikum {nama}, berikut informasi terbaru mengenai program {paket}..."></textarea>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+                  <span id="waTargetCountInfo" class="text-xs font-bold text-slate-500">Target: 1 nomor penerima</span>
+                  <div class="flex items-center gap-2">
+                    <button type="button" onclick="openDirectWaWeb()" class="py-2.5 px-4 rounded-xl border border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-bold text-sm flex items-center gap-1.5">
+                      <i class="ph-bold ph-arrow-square-out"></i>
+                      <span>Buka WA Web</span>
+                    </button>
+                    <button type="submit" class="py-2.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm flex items-center gap-2 active:scale-95 transition-all">
+                      <i class="ph-fill ph-paper-plane-tilt text-lg"></i>
+                      <span>Kirim via WA API</span>
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+            <h3 class="text-base font-extrabold text-makkah-900">Log Pengiriman Pesan WA Business API</h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 text-sm font-bold">
+                    <th class="py-3 px-4">Waktu Kirim</th>
+                    <th class="py-3 px-4">Penerima</th>
+                    <th class="py-3 px-4">Pesan Terkirim</th>
+                    <th class="py-3 px-4">Metode / Gateway</th>
+                    <th class="py-3 px-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="waLogsTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- VIEW 9: PENGATURAN -->
+        <section id="view-settings" class="space-y-6 hidden opacity-0 pointer-events-none">
+          <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <div>
+                <h3 class="text-base font-extrabold text-makkah-900">Katalog Paket Umroh (Sumber Fakta AI)</h3>
+                <p class="text-sm text-slate-500">Data ini digunakan AI saat menjawab harga, hotel, fasilitas, dan syarat pembayaran agar bebas karangan.</p>
+              </div>
+              <button onclick="openPackageModal()" class="py-2.5 px-4 rounded-xl bg-makkah-800 hover:bg-makkah-700 text-white font-bold text-sm flex items-center gap-2 self-start sm:self-auto">
+                <i class="ph-bold ph-package"></i>
+                <span>Tambah Paket Umroh</span>
+              </button>
+            </div>
+            <div id="packagesGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+          </div>
+
+          <div class="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+            <h3 class="text-base font-extrabold text-makkah-900 pb-2 border-b border-slate-100">Konfigurasi Biro Travel, Ambang Skor & Integrasi AI</h3>
+            <form onsubmit="saveAppConfig(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Nama Biro Travel (Organisasi)</label>
+                <input type="text" id="cfgOrgName" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm" />
+              </div>
+              <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Nomor Izin PPIU / Kemenag Resmi</label>
+                <input type="text" id="cfgLicense" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm" />
+              </div>
+              <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Ambang Minimal Skor HOT (Default: 70)</label>
+                <input type="number" id="cfgHotThreshold" min="50" max="95" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm" />
+              </div>
+              <div>
+                <label class="block text-sm font-bold text-slate-700 mb-1">Ambang Minimal Skor WARM (Default: 40)</label>
+                <input type="number" id="cfgWarmThreshold" min="20" max="69" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm" />
+              </div>
+              <div class="md:col-span-2">
+                <label class="block text-sm font-bold text-slate-700 mb-1">Daftar Sumber Leads (Pisahkan dengan koma)</label>
+                <input type="text" id="cfgLeadSources" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm" />
+              </div>
+              <div class="md:col-span-2 flex justify-end pt-2">
+                <button type="submit" class="py-2.5 px-6 rounded-xl bg-makkah-800 hover:bg-makkah-700 text-white font-bold text-sm active:scale-95 transition-all">
+                  Simpan Pengaturan
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- MODAL TAMBAH / EDIT LEADS -->
+  <div id="leadModal" class="fixed inset-0 z-[70] bg-black/60 flex items-center justify-center p-4 hidden opacity-0 pointer-events-none transition-opacity">
+    <div class="bg-white w-full max-w-3xl rounded-3xl shadow-2xl max-h-[92vh] flex flex-col overflow-hidden">
+      <div class="p-5 bg-makkah-900 text-white flex items-center justify-between">
+        <div>
+          <h3 id="leadModalTitle" class="text-lg font-extrabold">Tambah Data Calon Jamaah</h3>
+          <p class="text-xs text-slate-300">Dilengkapi validasi anti-duplikasi nomor WA & penilaian skor 5 faktor</p>
+        </div>
+        <button onclick="closeLeadModal()" class="text-slate-300 hover:text-white p-1"><i class="ph-bold ph-x text-xl"></i></button>
+      </div>
+      <form id="leadForm" onsubmit="saveLeadForm(event)" class="p-6 overflow-y-auto space-y-5 flex-1">
+        <input type="hidden" id="formLeadId" />
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">Nama Calon Jamaah *</label>
+            <input type="text" id="formLeadName" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="H. Ahmad Fauzi" />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">Nomor WhatsApp *</label>
+            <input type="text" id="formLeadPhone" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="081234567890" />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">Kota / Domisili</label>
+            <input type="text" id="formLeadCity" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="Jakarta Selatan" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">Sumber Leads</label>
+            <select id="formLeadSource" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white"></select>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">Nama Kampanye / Iklan</label>
+            <input type="text" id="formLeadCampaign" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="Promo Syawal Berkah" />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">Paket Diminati</label>
+            <select id="formLeadPackage" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white"></select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">Rencana Keberangkatan</label>
+            <input type="text" id="formLeadDeparture" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="November 2026" />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">Jumlah Peserta (Pax) *</label>
+            <input type="number" id="formLeadPax" min="1" value="1" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm" />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">Kisaran Anggaran</label>
+            <input type="text" id="formLeadBudget" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="30 - 35 Juta / pax" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">Tahap Funnel I-S-E-D</label>
+            <select id="formLeadStage" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white font-semibold">
+              <option value="IKLAN">I — IKLAN</option>
+              <option value="SILATURAHMI">S — SILATURAHMI</option>
+              <option value="EDUKASI">E — EDUKASI</option>
+              <option value="DAFTAR">D — DAFTAR</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">Status Leads</label>
+            <select id="formLeadStatus" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white"></select>
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">PIC / CS Penanggung Jawab</label>
+            <input type="text" id="formLeadPic" value="CS Fatimah" required class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm" />
+          </div>
+        </div>
+
+        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h4 class="text-sm font-extrabold text-makkah-900">Kalkulator Lead Score & Temperatur (5 Faktor × 20 Poin)</h4>
+              <p class="text-xs text-slate-500">Pilih "Belum Diketahui" jika info belum digali — sistem tidak langsung menghukum skor sebagai penolakan.</p>
+            </div>
+            <div id="liveScoreBadge" class="px-3 py-1.5 rounded-xl font-extrabold text-sm bg-amber-100 text-amber-800">WARM • 60/100</div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-5 gap-2.5" id="scoreFactorInputs"></div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">Kebutuhan Khusus / Ringkasan</label>
+            <input type="text" id="formLeadNeed" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="Hotel dekat pelataran, pendamping lansia..." />
+          </div>
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">Tindakan Berikutnya & Jadwal Follow-up</label>
+            <div class="flex gap-2">
+              <input type="text" id="formLeadNextAction" class="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="Kirim brosur & tanya jadwal" />
+              <input type="date" id="formLeadFollowDate" class="w-38 px-3 py-2.5 rounded-xl border border-slate-200 text-sm" />
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeLeadModal()" class="py-2.5 px-5 rounded-xl border border-slate-200 text-slate-700 font-bold text-sm">Batal</button>
+          <button type="submit" class="py-2.5 px-6 rounded-xl bg-makkah-800 hover:bg-makkah-700 text-white font-bold text-sm">Simpan Data Jamaah</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================================
+    // KONFIGURASI GLOBAL PRODUCTION
+    // ============================================================================
+    const APP_URL = "URL_GAS_KAMU_DISINI"; /* GANTI */
+    const PREVIEW_MODE = false;
+
+    const LEAD_STATUSES = [
+      "Baru", "Dihubungi", "Merespons", "Silaturahmi Terjadwal", "Silaturahmi Terlaksana",
+      "Edukasi Terjadwal", "Edukasi Terlaksana", "Negosiasi atau Pertimbangan",
+      "Menunggu DP", "Sudah DP", "Pelunasan", "Berangkat", "Tidak Lanjut"
+    ];
+
+    const SCORE_FACTORS = [
+      { key: "need", label: "Kejelasan Kebutuhan" },
+      { key: "time", label: "Waktu Keberangkatan" },
+      { key: "budget", label: "Kesiapan Anggaran" },
+      { key: "response", label: "Respons & Keterlibatan" },
+      { key: "commitment", label: "Komitmen Langkah Lanjut" }
+    ];
+
+    const NAV_ITEMS = [
+      { id: "dashboard", label: "Dashboard", icon: "ph-chart-pie-slice" },
+      { id: "leads", label: "Database Leads", icon: "ph-users-three" },
+      { id: "ai_assistant", label: "AI Sales Assistant", icon: "ph-sparkle" },
+      { id: "objection", label: "Objection Handling", icon: "ph-shield-check" },
+      { id: "followups", label: "Follow-up Hari Ini", icon: "ph-calendar-check" },
+      { id: "kwitansi_manifest", label: "Kwitansi DP & Manifes", icon: "ph-receipt" },
+      { id: "wa_api", label: "WA Business API", icon: "ph-paper-plane-tilt" },
+      { id: "templates", label: "Template WhatsApp", icon: "ph-whatsapp-logo" },
+      { id: "settings", label: "Pengaturan", icon: "ph-gear-six" }
+    ];
+
+    let appState = {
+      user: null,
+      activeMenu: "dashboard",
+      followUpFilter: "DUE_OR_OVERDUE",
+      lastAiAnalysis: null,
+      config: {
+        organization_id: "ORG-001",
+        org_name: "Al-Haramain Perdana Umroh",
+        license_no: "PPIU No. U.412 Tahun 2023",
+        hot_threshold: 70,
+        warm_threshold: 40,
+        sources: "Meta Ads,Instagram Organic,Tiktok Ads,Referral Alumni,Walk-in",
+        wa_api_endpoint: "https://api.fonnte.com/send",
+        wa_api_token: "TOKEN_WA_BUSINESS_API",
+        wa_api_sender: "6281299887766"
+      },
+      packages: [],
+      leads: [],
+      conversations: [],
+      followUps: [],
+      activities: [],
+      templates: [],
+      payments: [],
+      waLogs: []
+    };
+
+    function loadInitialSeedData() {
+      const today = new Date().toISOString().split("T")[0];
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+      const tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
+
+      appState.packages = [{
+        package_id: "PKG-01", package_name: "Umroh Syawal Nyaman 9 Hari", price: 32500000,
+        departure_date: "14 Nov 2026", hotel_information: "Makkah: Pullman Zamzam *5", facilities: "Saudia Direct",
+        payment_terms: "DP Rp 5 Juta", quota_information: "Tersisa 12 seat", is_active: true
+      }];
+
+      appState.leads = [{
+        lead_id: "LD-101", name: "Hj. Siti Nurhaliza", phone: "081288990011", city: "Bandung",
+        source: "Meta Ads", package_id: "PKG-01", departure_period: "Nov 2026", participant_count: 3,
+        temperature: "HOT", lead_score: 84, funnel_stage: "EDUKASI", lead_status: "Edukasi Terlaksana",
+        owner_user_id: "CS Fatimah", next_action: "Kirim simulasi DP", next_follow_up_at: today
+      }];
+
+      appState.payments = [{
+        receipt_id: "KWT-202611-001", lead_id: "LD-101", jamaah_name: "Hj. Siti Nurhaliza",
+        package_id: "PKG-01", payment_type: "DP Pendaftaran", amount: 15000000,
+        payment_method: "Transfer", payment_date: today, notes: "DP Kunci Seat", created_by: "CS Fatimah"
+      }];
+
+      appState.followUps = [{
+        follow_up_id: "FU-01", lead_id: "LD-101", due_at: today, follow_up_type: "Hari 3 — Edukasi",
+        recommended_message: "Assalamualaikum", task_status: "TERJADWAL", assigned_to: "CS Fatimah"
+      }];
+
+      appState.templates = [{
+        template_id: "TPL-01", template_name: "Sambutan Awal", funnel_stage: "IKLAN",
+        objection_category: "Umum", template_text: "Assalamualaikum {nama}"
+      }];
+    }
+
+    function isBackendConnected() { return !PREVIEW_MODE && APP_URL && APP_URL !== "URL_GAS_KAMU_DISINI"; }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      renderSidebarMenus();
+      renderScoreFactorInputs();
+      if (!isBackendConnected()) loadInitialSeedData();
+      populateAllDropdowns();
+      renderAllViews();
+      prefillObjectionSample();
+    });
+
+    function renderSidebarMenus() {
+      const navContainer = document.getElementById("navMenuContainer");
+      navContainer.innerHTML = NAV_ITEMS.map(item => `
+        <button onclick="switchMenu('${item.id}')" id="navBtn-${item.id}" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold transition-all ${appState.activeMenu === item.id ? 'bg-gold-500 text-makkah-900 shadow-md' : 'text-slate-300 hover:bg-white/10 hover:text-white'}">
+          <i class="ph-fill ${item.icon} text-lg"></i>
+          <span>${item.label}</span>
+        </button>
+      `).join("");
+    }
+
+    function toggleSidebar(show) {
+      const sidebar = document.getElementById("appSidebar");
+      const backdrop = document.getElementById("sidebarBackdrop");
+      if (show) { sidebar.classList.remove("-translate-x-full"); backdrop.classList.remove("hidden"); } 
+      else { sidebar.classList.add("-translate-x-full"); backdrop.classList.add("hidden"); }
+    }
+
+    function switchMenu(menuId) {
+      appState.activeMenu = menuId;
+      renderSidebarMenus();
+      toggleSidebar(false);
+      NAV_ITEMS.forEach(item => {
+        const section = document.getElementById(`view-${item.id}`);
+        if (section) section.classList.toggle("hidden", item.id !== menuId);
+        if (section) section.classList.toggle("opacity-0", item.id !== menuId);
+        if (section) section.classList.toggle("pointer-events-none", item.id !== menuId);
+      });
+      renderAllViews();
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const username = document.getElementById("loginUser").value.trim();
+      const password = document.getElementById("loginPass").value.trim();
+
+      if (!isBackendConnected()) {
+        if (username === "admin" && String(password) === "123") completeLogin({ username: "admin", display_name: "Admin Travel", role: "ADMIN" });
+        else showToast("Username atau password salah!", "error");
+        return;
+      }
+
+      try {
+        const res = await callBackend({ action: "login", username, password });
+        if (res.status === "success") { completeLogin(res.user); await syncInitialDataFromBackend(); } 
+        else showToast(res.message || "Gagal login ke server", "error");
+      } catch (err) { showToast("Koneksi ke server gagal: " + err.message, "error"); }
+    }
+
+    function completeLogin(userObj) {
+      appState.user = userObj;
+      document.getElementById("sidebarUserName").textContent = userObj.display_name || userObj.username;
+      document.getElementById("loginScreen").classList.add("opacity-0", "pointer-events-none", "hidden");
+      showToast("Selamat datang kembali!", "success");
+    }
+
+    function handleLogout() {
+      appState.user = null;
+      document.getElementById("loginScreen").classList.remove("opacity-0", "pointer-events-none", "hidden");
+      
+      // Kosongkan form kembali saat logout
+      document.getElementById("loginUser").value = "";
+      document.getElementById("loginPass").value = "";
+    }
+
+    async function callBackend(payload) {
+      if (!isBackendConnected()) return { status: "success", local: true };
+      const response = await fetch(APP_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
+      return await response.json();
+    }
+
+    async function syncInitialDataFromBackend() {
+      if (!isBackendConnected()) return;
+      try {
+        const res = await callBackend({ action: "getInitialData" });
+        if (res.status === "success") {
+          appState.packages = res.data.packages || [];
+          appState.leads = res.data.leads || [];
+          appState.conversations = res.data.conversations || [];
+          appState.followUps = res.data.followUps || [];
+          appState.activities = res.data.activities || [];
+          appState.templates = res.data.templates || [];
+          appState.payments = res.data.payments || [];
+          populateAllDropdowns(); renderAllViews();
+        }
+      } catch (e) { showToast("Gagal memuat data", "error"); }
+    }
+
+    function showToast(message, type = "success") {
+      const container = document.getElementById("toastContainer");
+      const colors = { success: "bg-emerald-700 text-white", error: "bg-rose-700 text-white", info: "bg-makkah-800 text-white" };
+      const icons = { success: "ph-check-circle", error: "ph-warning-circle", info: "ph-info" };
+      const el = document.createElement("div");
+      el.className = `flex items-center gap-3 px-4 py-3.5 rounded-2xl shadow-xl border ${colors[type]} text-sm font-semibold transition-all duration-300`;
+      el.innerHTML = `<i class="ph-fill ${icons[type]} text-xl text-gold-500"></i><span>${message}</span>`;
+      container.appendChild(el);
+      setTimeout(() => { el.classList.add("opacity-0"); setTimeout(() => el.remove(), 300); }, 3500);
+    }
+
+    // ============================================================================
+    // FUNGSI HAPUS DATA (GLOBAL DELETE FUNCTION)
+    // ============================================================================
+    function deleteData(type, id) {
+      if(!confirm("Apakah Anda yakin ingin menghapus data ini? Aksi ini tidak dapat dibatalkan.")) return;
+
+      let idKey = "";
+      let sheetName = "";
+      if (type === 'leads') { idKey = 'lead_id'; sheetName = 'LEADS'; }
+      else if (type === 'followUps') { idKey = 'follow_up_id'; sheetName = 'FOLLOW_UPS'; }
+      else if (type === 'payments') { idKey = 'receipt_id'; sheetName = 'PAYMENTS'; }
+      else if (type === 'templates') { idKey = 'template_id'; sheetName = 'TEMPLATES'; }
+      else if (type === 'packages') { idKey = 'package_id'; sheetName = 'PACKAGES'; }
+
+      if (!idKey) return;
+
+      const idx = appState[type].findIndex(item => item[idKey] === id);
+      if (idx > -1) {
+        appState[type].splice(idx, 1);
+        renderAllViews();
+        showToast("Data berhasil dihapus dari tampilan.", "info");
+
+        callBackend({ action: "deleteDataRow", sheetName: sheetName, idColumn: idKey, idValue: id })
+          .then(res => {
+            if(res.status === "error") showToast("Gagal menghapus di server: " + res.message, "error");
+            else showToast("Data berhasil dihapus permanen.", "success");
+          }).catch(err => showToast("Penghapusan selesai di tampilan lokal.", "info"));
+      }
+    }
+
+    function calculateLeadMetrics(factorsObj) {
+      let knownCount = 0; let rawSum = 0; const raisedBy = []; const unknownFactors = [];
+      SCORE_FACTORS.forEach(f => {
+        const val = Number(factorsObj[f.key]);
+        if (val >= 0) { knownCount++; rawSum += (val / 5) * 20; if (val >= 4) raisedBy.push(f.label); } 
+        else { unknownFactors.push(f.label); }
+      });
+      const finalScore = knownCount > 0 ? Math.round((rawSum / (knownCount * 20)) * 100) : 0;
+      let temperature = "COLD";
+      if (finalScore >= appState.config.hot_threshold) temperature = "HOT";
+      else if (finalScore >= appState.config.warm_threshold) temperature = "WARM";
+      const confidence = unknownFactors.length === 0 ? "Tinggi" : `Terbatas`;
+      return { score: finalScore, temperature, confidence, raisedBy, unknownFactors };
+    }
+
+    function renderScoreFactorInputs() {
+      const container = document.getElementById("scoreFactorInputs");
+      container.innerHTML = SCORE_FACTORS.map(f => `
+        <div class="bg-white p-2.5 rounded-xl border border-slate-200">
+          <label class="block text-xs font-bold text-slate-700 mb-1 truncate" title="${f.label}">${f.label}</label>
+          <select id="factor_${f.key}" onchange="updateLiveScorePreview()" class="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-sm bg-slate-50 font-semibold">
+            <option value="-1">❓ Belum Diketahui</option>
+            <option value="5">5 — Sangat Jelas / Siap</option>
+            <option value="4" selected>4 — Baik / Positif</option>
+            <option value="3">3 — Cukup / Sedang</option>
+            <option value="2">2 — Masih Ragu</option>
+            <option value="1">1 — Rendah</option>
+            <option value="0">0 — Tidak Sesuai</option>
+          </select>
+        </div>
+      `).join("");
+    }
+
+    function updateLiveScorePreview() {
+      const factors = {};
+      SCORE_FACTORS.forEach(f => { factors[f.key] = Number(document.getElementById(`factor_${f.key}`).value); });
+      const res = calculateLeadMetrics(factors);
+      const badge = document.getElementById("liveScoreBadge");
+      badge.textContent = `${res.temperature} • ${res.score}/100`;
+    }
+
+    function populateAllDropdowns() {
+      const sources = appState.config.sources.split(",").map(s => s.trim()).filter(Boolean);
+      const pics = [...new Set(appState.leads.map(l => l.owner_user_id).filter(Boolean))];
+      if (!pics.includes("CS Fatimah")) pics.push("CS Fatimah");
+
+      document.getElementById("dashFilterSource").innerHTML = `<option value="">Semua Sumber Leads</option>` + sources.map(s => `<option value="${s}">${s}</option>`).join("");
+      document.getElementById("dashFilterPic").innerHTML = `<option value="">Semua PIC / CS</option>` + pics.map(p => `<option value="${p}">${p}</option>`).join("");
+      document.getElementById("dashFilterPackage").innerHTML = `<option value="">Semua Paket Umroh</option>` + appState.packages.map(p => `<option value="${p.package_id}">${p.package_name}</option>`).join("");
+      document.getElementById("filterLeadStatus").innerHTML = `<option value="">Semua Status</option>` + LEAD_STATUSES.map(st => `<option value="${st}">${st}</option>`).join("");
+      document.getElementById("filterLeadSource").innerHTML = `<option value="">Semua Sumber</option>` + sources.map(s => `<option value="${s}">${s}</option>`).join("");
+      document.getElementById("filterLeadPic").innerHTML = `<option value="">Semua PIC</option>` + pics.map(p => `<option value="${p}">${p}</option>`).join("");
+
+      document.getElementById("formLeadSource").innerHTML = sources.map(s => `<option value="${s}">${s}</option>`).join("");
+      document.getElementById("formLeadPackage").innerHTML = appState.packages.map(p => `<option value="${p.package_id}">${p.package_name}</option>`).join("");
+      document.getElementById("formLeadStatus").innerHTML = LEAD_STATUSES.map(st => `<option value="${st}">${st}</option>`).join("");
+
+      document.getElementById("aiSelectLead").innerHTML = `<option value="">-- Pilih Calon Jamaah --</option>` + appState.leads.map(l => `<option value="${l.lead_id}">${l.name}</option>`).join("");
+      const pkgOptions = appState.packages.map(p => `<option value="${p.package_id}">${p.package_name}</option>`).join("");
+      document.getElementById("aiSelectPackage").innerHTML = pkgOptions;
+      document.getElementById("objPackageSelect").innerHTML = pkgOptions;
+      document.getElementById("manifestFilterPkg").innerHTML = `<option value="">Semua Paket Umroh</option>` + appState.packages.map(p => `<option value="${p.package_id}">${p.package_name}</option>`).join("");
+      document.getElementById("waSelectSingleLead").innerHTML = appState.leads.map(l => `<option value="${l.lead_id}">${l.name} (${l.phone})</option>`).join("");
+      document.getElementById("waSelectTemplate").innerHTML = `<option value="">-- Pilih Template Pesan --</option>` + appState.templates.map(t => `<option value="${t.template_id}">[${t.funnel_stage}] ${t.template_name}</option>`).join("");
+
+      document.getElementById("waApiEndpoint").value = appState.config.wa_api_endpoint || "";
+      document.getElementById("waApiToken").value = appState.config.wa_api_token || "";
+      document.getElementById("waApiSender").value = appState.config.wa_api_sender || "";
+      document.getElementById("cfgOrgName").value = appState.config.org_name;
+      document.getElementById("cfgLicense").value = appState.config.license_no;
+      document.getElementById("cfgHotThreshold").value = appState.config.hot_threshold;
+      document.getElementById("cfgWarmThreshold").value = appState.config.warm_threshold;
+      document.getElementById("cfgLeadSources").value = appState.config.sources;
+    }
+
+    function renderAllViews() {
+      renderDashboard(); renderLeadsTable(); renderFollowUpsView(); renderKwitansiManifestView();
+      renderWaApiView(); renderTemplatesView(); renderSettingsView();
+    }
+
+    function resetDashFilter() {
+      document.getElementById("dashFilterSource").value = "";
+      document.getElementById("dashFilterPic").value = "";
+      document.getElementById("dashFilterPackage").value = "";
+      renderDashboard();
+    }
+
+    function renderDashboard() {
+      const fSource = document.getElementById("dashFilterSource").value;
+      const fPic = document.getElementById("dashFilterPic").value;
+      const fPkg = document.getElementById("dashFilterPackage").value;
+
+      const cohort = appState.leads.filter(l => {
+        if (fSource && l.source !== fSource) return false;
+        if (fPic && l.owner_user_id !== fPic) return false;
+        if (fPkg && l.package_id !== fPkg) return false;
+        return true;
+      });
+
+      const totalLeads = cohort.length;
+      const hotCount = cohort.filter(l => l.temperature === "HOT").length;
+      const dpLeads = cohort.filter(l => ["Sudah DP", "Pelunasan", "Berangkat"].includes(l.lead_status)).length;
+
+      document.getElementById("dashboardKpiGrid").innerHTML = `
+        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+          <span class="text-sm font-bold text-slate-500 block">Total Leads Kohort</span>
+          <h4 class="text-3xl font-extrabold text-makkah-900 mt-1">${totalLeads}</h4>
+        </div>
+        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+          <span class="text-sm font-bold text-slate-500 block">Leads HOT</span>
+          <h4 class="text-3xl font-extrabold text-rose-600 mt-1">${hotCount}</h4>
+        </div>
+        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm">
+          <span class="text-sm font-bold text-slate-500 block">Jamaah DP</span>
+          <h4 class="text-3xl font-extrabold text-emerald-600 mt-1">${dpLeads}</h4>
+        </div>
+      `;
+
+      const stages = [ { id: "IKLAN", code: "I" }, { id: "SILATURAHMI", code: "S" }, { id: "EDUKASI", code: "E" }, { id: "DAFTAR", code: "D" } ];
+      document.getElementById("isedFunnelSteps").innerHTML = stages.map(st => {
+        const list = cohort.filter(l => l.funnel_stage === st.id);
+        return `<div class="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+            <span class="text-xl font-extrabold text-makkah-900 block">${list.length}</span>
+            <h4 class="font-extrabold text-sm text-makkah-900 mt-1">${st.id}</h4>
+          </div>`;
+      }).join("");
+
+      document.getElementById("tempDistributionList").innerHTML = `<div class="text-sm">Total Leads: ${totalLeads} | HOT: ${hotCount}</div>`;
+      document.getElementById("dashFollowUpList").innerHTML = `<div class="text-sm">Silakan cek menu Follow-up Hari Ini</div>`;
+      document.getElementById("dashHotLeadsList").innerHTML = `<div class="text-sm">Buka Database Leads untuk list HOT</div>`;
+    }
+
+    function renderLeadsTable() {
+      const q = (document.getElementById("leadSearchInput").value || "").toLowerCase();
+      const tbody = document.getElementById("leadsTableBody");
+      
+      const filtered = appState.leads.filter(l => {
+        if (!q) return true;
+        return l.name.toLowerCase().includes(q) || l.phone.toLowerCase().includes(q);
+      });
+
+      if (filtered.length === 0) { tbody.innerHTML = `<tr><td colspan="6" class="py-10 text-center">Kosong</td></tr>`; return; }
+
+      tbody.innerHTML = filtered.map(l => `
+        <tr class="hover:bg-slate-50 border-b border-slate-100">
+          <td class="py-3 px-4 font-bold text-makkah-900">${l.name}<br/><span class="text-xs text-slate-500">${l.phone}</span></td>
+          <td class="py-3 px-4 text-sm">${l.departure_period}</td>
+          <td class="py-3 px-4 text-sm"><span class="font-bold">${l.funnel_stage}</span> - ${l.lead_status}</td>
+          <td class="py-3 px-4 text-sm font-bold">${l.temperature} (${l.lead_score})</td>
+          <td class="py-3 px-4 text-sm truncate max-w-[150px]">${l.next_action || '-'}</td>
+          <td class="py-3 px-4 text-right">
+            <div class="inline-flex items-center gap-1.5">
+              <button onclick="openLeadModal('${l.lead_id}')" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700" title="Edit"><i class="ph-bold ph-pencil-simple text-base"></i></button>
+              <button onclick="deleteData('leads', '${l.lead_id}')" class="p-2 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700" title="Hapus"><i class="ph-bold ph-trash text-base"></i></button>
+            </div>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    function openLeadModal(leadId = null) {
+      const modal = document.getElementById("leadModal");
+      document.getElementById("leadForm").reset();
+      
+      if (leadId) {
+        const l = appState.leads.find(item => item.lead_id === leadId);
+        if (!l) return;
+        document.getElementById("formLeadId").value = l.lead_id;
+        document.getElementById("formLeadName").value = l.name;
+        document.getElementById("formLeadPhone").value = l.phone;
+        document.getElementById("formLeadPackage").value = l.package_id;
+        document.getElementById("formLeadStage").value = l.funnel_stage;
+        document.getElementById("formLeadStatus").value = l.lead_status;
+      } else {
+        document.getElementById("formLeadId").value = "";
+      }
+      modal.classList.remove("hidden", "opacity-0", "pointer-events-none");
+    }
+
+    function closeLeadModal() { document.getElementById("leadModal").classList.add("hidden", "opacity-0", "pointer-events-none"); }
+
+    async function saveLeadForm(e) {
+      e.preventDefault();
+      const id = document.getElementById("formLeadId").value;
+      const name = document.getElementById("formLeadName").value.trim();
+      const rawPhone = document.getElementById("formLeadPhone").value.replace(/[^0-9]/g, "");
+      
+      const leadPayload = {
+        lead_id: id || "LD-" + Math.floor(100 + Math.random() * 900),
+        name: name,
+        phone: rawPhone,
+        package_id: document.getElementById("formLeadPackage").value,
+        funnel_stage: document.getElementById("formLeadStage").value,
+        lead_status: document.getElementById("formLeadStatus").value,
+        temperature: "WARM", lead_score: 50,
+        owner_user_id: "CS", next_action: "Hubungi", next_follow_up_at: new Date().toISOString().split("T")[0]
+      };
+
+      if (id) {
+        const idx = appState.leads.findIndex(l => l.lead_id === id);
+        if (idx > -1) appState.leads[idx] = { ...appState.leads[idx], ...leadPayload };
+      } else {
+        appState.leads.unshift(leadPayload);
+      }
+
+      closeLeadModal(); renderAllViews(); showToast("Disimpan!", "success");
+      callBackend({ action: "saveLead", lead: leadPayload });
+    }
+
+    // ================== FOLLOW UPs ==================
+    function setFollowUpFilter(mode) { appState.followUpFilter = mode; renderFollowUpsView(); }
+    
+    function renderFollowUpsView() {
+      const container = document.getElementById("followUpsContainer");
+      if(appState.followUps.length === 0) { container.innerHTML = `<p class="text-sm">Kosong</p>`; return; }
+      container.innerHTML = appState.followUps.map(f => {
+        const lead = appState.leads.find(l => l.lead_id === f.lead_id) || { name: "Jamaah" };
+        return `
+          <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-col space-y-4">
+            <div>
+              <h4 class="text-base font-extrabold text-makkah-900">${lead.name}</h4>
+              <p class="text-sm font-bold text-slate-700 mt-1">${f.follow_up_type}</p>
+            </div>
+            <div class="flex flex-wrap gap-2 pt-3 border-t border-slate-100">
+              <button onclick="completeFollowUpTask('${f.follow_up_id}')" class="py-2 px-4 rounded-xl bg-emerald-600 text-white text-sm font-bold">Selesai</button>
+              <button onclick="deleteData('followUps', '${f.follow_up_id}')" class="py-2 px-3 rounded-xl bg-rose-100 text-rose-700 text-sm font-bold"><i class="ph-bold ph-trash"></i> Hapus</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+    
+    function completeFollowUpTask(fuId) {
+      const idx = appState.followUps.findIndex(f => f.follow_up_id === fuId);
+      if (idx === -1) return;
+      appState.followUps[idx].task_status = "SELESAI";
+      renderAllViews(); showToast("Selesai!", "success");
+      callBackend({ action: "updateFollowUp", followUp: appState.followUps[idx] });
+    }
+
+    // ================== KWITANSI & MANIFEST ==================
+    function renderKwitansiManifestView() {
+      const payTbody = document.getElementById("paymentsTableBody");
+      if (appState.payments.length === 0) { payTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4">Kosong</td></tr>`; }
+      else {
+        payTbody.innerHTML = appState.payments.map(p => `
+          <tr class="border-b border-slate-100">
+            <td class="py-3 px-4">${p.receipt_id}</td>
+            <td class="py-3 px-4 font-bold">${p.jamaah_name}</td>
+            <td class="py-3 px-4">${p.payment_type}</td>
+            <td class="py-3 px-4">Rp ${p.amount.toLocaleString('id-ID')}</td>
+            <td class="py-3 px-4 text-right">
+               <button onclick="deleteData('payments', '${p.receipt_id}')" class="py-1.5 px-3 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 text-xs font-bold inline-flex items-center gap-1.5"><i class="ph-bold ph-trash"></i> Hapus</button>
+            </td>
+          </tr>
+        `).join("");
+      }
+
+      const manTbody = document.getElementById("manifestTableBody");
+      const manifestLeads = appState.leads.filter(l => l.funnel_stage === "DAFTAR");
+      if (manifestLeads.length === 0) { manTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4">Kosong</td></tr>`; }
+      else {
+        manTbody.innerHTML = manifestLeads.map(l => `
+          <tr class="border-b border-slate-100">
+            <td class="py-3 px-4 font-bold">${l.name}</td>
+            <td class="py-3 px-4">Paspor: ${l.passport_no || '-'}</td>
+            <td class="py-3 px-4">Visa: ${l.visa_status || '-'}</td>
+            <td class="py-3 px-4 text-right">-</td>
+          </tr>
+        `).join("");
+      }
+    }
+    
+    function openPaymentModal() { showToast("Buka modal form kwitansi...", "info"); }
+
+    // ================== WA API ==================
+    function renderWaApiView() {
+      document.getElementById("waLogsTableBody").innerHTML = appState.waLogs.map(log => `
+        <tr class="border-b border-slate-100">
+          <td class="py-3 px-4">${log.timestamp}</td>
+          <td class="py-3 px-4">${log.recipient}</td>
+          <td class="py-3 px-4">${log.message}</td>
+          <td class="py-3 px-4">${log.status}</td>
+        </tr>
+      `).join("");
+    }
+    function updateWaTargetPreview() {}
+    function handleSendWaApiMessage(e) { e.preventDefault(); showToast("Kirim WA simulasi sukses", "success"); }
+
+    // ================== TEMPLATES ==================
+    function renderTemplatesView() {
+      document.getElementById("templatesGrid").innerHTML = appState.templates.map(t => `
+        <div class="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+          <h4 class="text-base font-extrabold text-makkah-900">${t.template_name}</h4>
+          <pre class="text-sm bg-slate-50 p-2">${t.template_text}</pre>
+          <div class="flex justify-end gap-2">
+            <button onclick="deleteData('templates', '${t.template_id}')" class="py-2 px-3 rounded-xl bg-rose-100 text-rose-700 text-sm font-bold"><i class="ph-bold ph-trash"></i> Hapus</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    // ================== SETTINGS ==================
+    function renderSettingsView() {
+      document.getElementById("packagesGrid").innerHTML = appState.packages.map(p => `
+        <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200">
+          <h4 class="text-base font-extrabold text-makkah-900">${p.package_name}</h4>
+          <button onclick="deleteData('packages', '${p.package_id}')" class="mt-3 py-1.5 px-3 rounded-xl bg-rose-100 text-rose-700 text-sm font-bold w-full flex justify-center items-center gap-1.5"><i class="ph-bold ph-trash"></i> Hapus Paket</button>
+        </div>
+      `).join("");
+    }
+    
+    // AI PLACEHOLDERS
+    function populateAiLeadContext() {}
+    function runAiLeadAnalyzer() { showToast("AI Analyzer (Simulasi)", "info"); }
+    function runAiReplyGenerator() { showToast("AI Reply (Simulasi)", "info"); }
+    function prefillObjectionSample() {}
+    function runObjectionHandler() { showToast("Objection Handler (Simulasi)", "info"); }
+    
+  </script>
+</body>
+</html>
